@@ -1,18 +1,26 @@
 namespace GameStore
 {
+    /// Represents a game with name, price, and available units.
     public class Game
     {
+        // Game title
         public string Name { get; set; }
-        public int Price { get; set; }
+
+        // Price of the game (MUST be decimal)
+        public decimal Price { get; set; }
+
+        // Available units in stock
         public int Units { get; set; }
 
-        public Game(string name, int price, int units)
+        /// Parameterized constructor to initialize a game object.
+        public Game(string name, decimal price, int units)
         {
             Name = name;
             Price = price;
             Units = units;
         }
 
+        /// Decreases stock by 1 when a game is purchased.
         public void DecrementUnits()
         {
             if (Units > 0)
