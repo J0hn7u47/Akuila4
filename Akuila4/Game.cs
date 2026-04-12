@@ -21,7 +21,7 @@ namespace GameStore
         }
 
         /// Decreases stock by 1 when a game is purchased.
-        public void DecrementUnits()
+        public void Decrement()
         {
             if (Units > 0)
                 Units--;
