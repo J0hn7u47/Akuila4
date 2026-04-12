@@ -1,85 +1,131 @@
- using System;
-using System.Collections.Generic;
+namespace GameStore;
 
-namespace GameStore
+// Represents a general game platform store and contains the shared
+// purchasing behavior used by derived platform classes.
+public abstract class Platform : IPlatform
 {
-    /// Abstract class that implements the IPlatform interface.
-    public abstract class Platform : IPlatform
+
+    // Gets the list of games sold by this platform.    
+    protected List<Game> Games { get; } = new List<Game>();
+
+    // Gets or sets the selected game.
+    protected int SelectedGame { get; set; }
+
+    // Gets or sets the total amount paid by the customer.
+    protected decimal AmountPaid {get; set;}
+
+    // Gets the name of the store.
+    public abstract string StoreName {get;}
+    
+    // Runs the full game purchase process in order.
+    public void PurchaseGame()
     {
-        // List of games available on the platform
-        protected List<Game> games = new List<Game>();
+        Introduction();
+        SelectGame();
+        AcceptPayment();
+        DispenseChange();
+        DeliverGame();
+    }
 
-        // The game selected by the user for purchase
-        protected Game selectedGame = null!;
+    // Displays the platform-specific welcome message.
+    protected abstract void Introduction();
 
-        // Total amount paid by the user during the purchase process
-        protected decimal totalPaid = 0m;
-
-        /// Abstract property for store name
-        public abstract string StoreName { get; set; }
-
-        /// Abstract method to introduce the store
-        public abstract void Introduction();
-
-        /// Implements the full purchase process
-        public void PurchaseGame()
+    // Displays the list of games and allows the user to select
+    // one game that is currently in stock.
+    protected void SelectGame()
+    {
+        while(true)
         {
-            totalPaid = 0m;
-            Introduction();
-            SelectGame();
-            AcceptPayment();
-            DispenseChange();
-            DeliverGame();
-        }
-
-        /// Allows the user to select a game
-        public void SelectGame()
-        {
-            Console.WriteLine("\nSelect Game:");
-
-            for (int i = 0; i < games.Count; i++)
-                Console.WriteLine($"{i + 1}. {games[i].Name} - ${games[i].Price} ({games[i].Units})");
-
-            int choice = int.Parse(Console.ReadLine()!);
-            selectedGame = games[choice - 1];
-
-            if (selectedGame.Units > 0)
-                selectedGame.DecrementUnits();
-            else
+                Console.WriteLine();
+                Console.WriteLine($"--- {StoreName} Games ---");
+                
+                for (int i=0; i < Games.Count; i++)
             {
-                Console.WriteLine("Out of stock!");
-                SelectGame();
+                    Console.WriteLine($"{i + 1}. {Games[i].Name} - ${Games[i].Price} - Stock: {Games[i].Units}");
+
             }
+            Console.Write("Select a game: ");
+            string? input = Console.ReadLine();
+
+            if (int.TryParse(input, out int choice) &&
+                choice >= 1 &&
+                choice <= Games.Count &&
+                Games[choice - 1].Units > 0)
+            {
+                SelectedGame = choice - 1;
+                break;
+            }
+
+            Console.WriteLine("Invalid selection. Choose a game that is in stock");
         }
+    }
 
-        /// Default payment method ($20 and $10)
-        public virtual void AcceptPayment()
+    // Reads the quantity of a bill denomination and returns
+    // the total dollar amount for that denomination.    
+    protected decimal ReadBills(string prompt, int denomination)
+    {
+        int quantity;
+        
+        while (true)
         {
-            Console.WriteLine("$20 bills:");
-            totalPaid += int.Parse(Console.ReadLine()!) * 20m;
+            Console.Write(prompt);
+            string? input = Console.ReadLine();
 
-            Console.WriteLine("$10 bills:");
-            totalPaid += int.Parse(Console.ReadLine()!) * 10m;
+            if (int.TryParse(input, out quantity) && quantity >= 0)
+            {
+                return quantity * denomination;
+            }
+
+            Console.WriteLine("Enter a whole number 0 or greater.");
         }
+    }
 
-        /// Default change dispensing ($10 and $1)
-        public virtual void DispenseChange()
+    // Accepts payment using $20 and $10 bills.
+    // This is the default payment behavior for the base platform.
+    protected virtual void AcceptPayment()
+    {
+        Console.WriteLine();
+        Console.WriteLine("Enter payment quantities");
+
+        AmountPaid = 0;
+        AmountPaid += ReadBills("Number of $20 bills: ", 20);
+        AmountPaid += ReadBills("Number of $10 bills: ", 10);
+    }
+
+    // Dispenses change using $10 and $1 bills.
+    // This is the default change behavior for the base platform.
+    protected virtual void DispenseChange()
+    {
+        int change = (int)(AmountPaid - Games[SelectedGame].Price);
+        if (change < 0)
         {
-            decimal change = totalPaid - selectedGame.Price;
-
-            int tens = (int)(change / 10);
-            change %= 10;
-
-            int ones = (int)change;
-
-            Console.WriteLine($"$10: {tens}");
-            Console.WriteLine($"$1: {ones}");
+            Console.WriteLine("Insufficient payment. No change returned.");
+            return;
         }
+        int tens = change / 10;
+        change %= 10;
+        int ones = change;
 
-        /// Deliver the game
-        public void DeliverGame()
+        Console.WriteLine();
+        Console.WriteLine("Change returned:");
+        Console.WriteLine($"$10 bills: {tens} ");
+        Console.WriteLine($"$1 bills: {ones}");
+    }
+
+    // Delivers the selected game only if enough payment was made.
+    // Inventory is reduced after a successful purchase.
+    protected virtual void DeliverGame()
+    {
+        if (AmountPaid >= Games[SelectedGame].Price)
         {
-            Console.WriteLine($"Delivering {selectedGame.Name}...");
+            Games[SelectedGame].Decrement();
+            Console.WriteLine();
+            Console.WriteLine($"Thank you for using the {StoreName}.");
+        }
+        else
+        {
+            Console.WriteLine();
+            Console.WriteLine("Not enough payment. Game cannot be delivered.");
         }
     }
 }
