@@ -5,7 +5,7 @@ namespace GameStore
     public interface IPlatform
     {
         // Name of the store (PS5 or Switch2)
-        string StoreName { get }
+        string StoreName { get; }
         // Controls the full purchasing process
         void PurchaseGame();
     }
